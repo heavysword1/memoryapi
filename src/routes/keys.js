@@ -7,7 +7,14 @@ const supabase = require('../lib/supabase');
 // POST /keys — generate a new API key
 router.post('/', async (req, res) => {
   try {
-    const { agent_id, email, plan = 'free' } = req.body;
+    const { agent_id, email, plan = 'free', admin_secret } = req.body;
+
+    // Require admin secret for non-free plans
+    if (plan !== 'free') {
+      if (!admin_secret || admin_secret !== process.env.ADMIN_SECRET) {
+        return res.status(403).json({ error: 'Admin secret required for paid plans.' });
+      }
+    }
 
     if (!agent_id) {
       return res.status(400).json({ error: 'agent_id is required.' });

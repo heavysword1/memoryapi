@@ -13,6 +13,10 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'content is required and must be a string.' });
     }
 
+    if (content.length > 10000) {
+      return res.status(400).json({ error: 'content exceeds maximum length of 10,000 characters.' });
+    }
+
     // Check memory limit
     const { keyRecord, agentId } = req;
     if (keyRecord.memory_count >= keyRecord.max_memories) {
@@ -69,7 +73,7 @@ router.get('/', authenticate, async (req, res) => {
     const { data, error } = await supabase.rpc('search_memories', {
       query_embedding: embedding,
       match_agent_id: req.agentId,
-      match_threshold: parseFloat(threshold),
+      match_threshold: parseFloat(threshold) || 0.4,
       match_count: parseInt(limit)
     });
 
