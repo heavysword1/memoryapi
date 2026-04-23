@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ override: true });
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -83,6 +83,16 @@ try {
           accepts: [{ scheme: 'exact', price: '$0.001', network: X402_NETWORK, payTo: PAY_TO }],
           description: 'Semantically search stored memories',
           mimeType: 'application/json'
+        },
+      'POST /x402/docs/upload': {
+          accepts: [{ scheme: 'exact', price: '$0.05', network: X402_NETWORK, payTo: PAY_TO }],
+          description: 'Upload and ingest a document for semantic search',
+          mimeType: 'application/json'
+        },
+      'GET /x402/docs/query': {
+          accepts: [{ scheme: 'exact', price: '$0.01', network: X402_NETWORK, payTo: PAY_TO }],
+          description: 'Semantically search within an uploaded document',
+          mimeType: 'application/json'
         }
       },
       x402Server
@@ -101,6 +111,7 @@ app.use('/mcp', require('./routes/mcp'));
 app.use('/billing', require('./routes/billing'));
 app.use('/x402', require('./routes/x402'));
 app.use('/docs', require('./routes/docs'));
+app.use('/x402/docs', require('./routes/x402-docs'));
 
 // Health check
 app.get('/', (req, res) => {
