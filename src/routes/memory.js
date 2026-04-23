@@ -17,6 +17,25 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'content exceeds maximum length of 10,000 characters.' });
     }
 
+    // Prompt injection detection — block suspicious instruction patterns
+    const injectionPatterns = [
+      /ignore\s+(all\s+)?(previous|prior|above)\s+instructions/i,
+      /system\s*:\s*override/i,
+      /\[INST\]/i,
+      /<\|system\|>/i,
+      /you\s+are\s+now\s+a/i,
+      /forget\s+(everything|all)\s+(you|above)/i,
+      /new\s+instructions?\s*:/i,
+      /disregard\s+(all\s+)?(previous|prior)/i
+    ];
+
+    const hasInjection = injectionPatterns.some(pattern => pattern.test(content));
+    if (hasInjection) {
+      return res.status(400).json({ 
+        error: 'Content contains potentially unsafe instruction patterns.' 
+      });
+    }
+
     // Check memory limit
     const { keyRecord, agentId } = req;
     if (keyRecord.memory_count >= keyRecord.max_memories) {
@@ -62,10 +81,15 @@ router.post('/', authenticate, async (req, res) => {
 // GET /memory?query=...&limit=10&threshold=0.7 — semantic search
 router.get('/', authenticate, async (req, res) => {
   try {
-    const { query, limit = 10, threshold = 0.4 } = req.query;
+    const { query, threshold = 0.4 } = req.query;
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50); // cap at 50
 
     if (!query) {
       return res.status(400).json({ error: 'query parameter is required.' });
+    }
+
+    if (typeof query !== 'string' || query.length > 1000) {
+      return res.status(400).json({ error: 'query must be a string under 1000 characters.' });
     }
 
     const embedding = await generateEmbedding(query);

@@ -108,6 +108,30 @@ async function executeTool(name, args, agentId, keyRecord) {
     case 'store_memory': {
       const { content, metadata = {} } = args;
 
+      if (!content || typeof content !== 'string') {
+        return { error: 'content must be a string.' };
+      }
+
+      if (content.length > 10000) {
+        return { error: 'content exceeds maximum length of 10,000 characters.' };
+      }
+
+      // Prompt injection detection
+      const injectionPatterns = [
+        /ignore\s+(all\s+)?(previous|prior|above)\s+instructions/i,
+        /system\s*:\s*override/i,
+        /\[INST\]/i,
+        /<\|system\|>/i,
+        /you\s+are\s+now\s+a/i,
+        /forget\s+(everything|all)\s+(you|above)/i,
+        /new\s+instructions?\s*:/i,
+        /disregard\s+(all\s+)?(previous|prior)/i
+      ];
+
+      if (injectionPatterns.some(p => p.test(content))) {
+        return { error: 'Content contains potentially unsafe instruction patterns.' };
+      }
+
       if (keyRecord.memory_count >= keyRecord.max_memories) {
         return { 
           error: `Memory limit reached (${keyRecord.max_memories}). Upgrade your plan at memoryapi.org.` 
