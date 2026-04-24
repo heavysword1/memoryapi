@@ -8,7 +8,7 @@
     "dev": "nodemon src/index.js"
   },
   "dependencies": {
-    "@coinbase/cdp-sdk": "^1.46.0",
+    "@coinbase/cdp-sdk": "^1.48.2",
     "@coinbase/x402": "^2.1.0",
     "@supabase/supabase-js": "^2.39.0",
     "@x402/core": "^2.10.0",
@@ -23,7 +23,8 @@
     "openai": "^4.28.0",
     "pdf-parse": "^2.4.5",
     "stripe": "^22.0.2",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.0",
+    "viem": "^2.48.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"
