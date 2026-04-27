@@ -99,6 +99,12 @@ try {
           description: 'Semantically search within an uploaded document using natural language',
           mimeType: 'application/json',
           extensions: { ...declareDiscoveryExtension({ input: { doc_id: 'uuid', q: 'what are the payment terms', agent_id: 'my-agent' }, inputSchema: { properties: { doc_id: { type: 'string' }, q: { type: 'string' }, agent_id: { type: 'string' } }, required: ['doc_id', 'q', 'agent_id'] }, output: { example: { success: true, results: [], count: 0 } } }) }
+        },
+      'POST /x402/translate': {
+          accepts: [{ scheme: 'exact', price: '$0.003', network: X402_NETWORK, payTo: PAY_TO }],
+          description: 'Translate text between 11 languages — no API key needed, pay per request in USDC',
+          mimeType: 'application/json',
+          extensions: { ...declareDiscoveryExtension({ input: { text: 'Hello world', target: 'es', source: 'auto' }, inputSchema: { properties: { text: { type: 'string', description: 'Text to translate (max 5,000 chars)' }, target: { type: 'string', description: 'Target language code: en, es, fr, de, it, pt, zh, ja, ar, ru, ko' }, source: { type: 'string', description: 'Source language code or auto for detection (default: auto)' } }, required: ['text', 'target'] }, bodyType: 'json', output: { example: { success: true, translated: 'Hola mundo', source: 'en', target: 'es' } } }) }
         }
       },
       x402Server
@@ -118,6 +124,8 @@ app.use('/billing', require('./routes/billing'));
 app.use('/x402', require('./routes/x402'));
 app.use('/docs', require('./routes/docs'));
 app.use('/x402/docs', require('./routes/x402-docs'));
+app.use('/translate', require('./routes/translate'));
+app.use('/x402/translate', require('./routes/x402-translate'));
 
 // Health check
 app.get('/', (req, res) => {
