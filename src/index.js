@@ -16,6 +16,7 @@ const allowedOrigins = [
   'https://api.cdp.coinbase.com',
   'https://x402.org'
 ];
+app.set('trust proxy', 1); // Trust nginx proxy for HTTPS detection
 app.use(cors({
   origin: function(origin, callback) {
     // Allow MCP clients, curl, x402 facilitator (no origin) + known origins
@@ -71,7 +72,17 @@ try {
   }
   const x402Server = new x402ResourceServer(facilitatorClient)
     .register(X402_NETWORK, new ExactEvmScheme())
-    .registerExtension(bazaarResourceServerExtension);
+    .registerExtension(bazaarResourceServerExtension)
+    .onAfterSettle((context) => {
+      const settle = context?.result;
+      const extensions = settle?.extensions;
+      if (extensions) {
+        console.log('[Bazaar] Settle extensions:', JSON.stringify(extensions));
+      } else {
+        console.log('[Bazaar] No extensions in settle result — Bazaar not seeing metadata');
+        console.log('[Bazaar] Settle result keys:', Object.keys(settle || {}));
+      }
+    });
 
   app.use(
     paymentMiddleware(
@@ -79,62 +90,74 @@ try {
         'POST /x402/memory': {
           accepts: [{ scheme: 'exact', price: '$0.001', network: X402_NETWORK, payTo: PAY_TO }],
           description: 'Store a memory for an AI agent',
-          mimeType: 'application/json',
           extensions: { bazaar: { info: {
             input: { type: 'http', method: 'POST', bodyType: 'json',
               body: { content: 'User prefers dark mode', agent_id: 'my-agent' },
               schema: { properties: { content: { type: 'string' }, agent_id: { type: 'string' } }, required: ['content', 'agent_id'] }
             },
-            output: { success: true, memory: { id: 'uuid', content: 'User prefers dark mode', created_at: '2026-01-01T00:00:00Z' } }
-          }}}
+            output: { example: { success: true, memory: { id: 'uuid', content: 'User prefers dark mode', created_at: '2026-01-01T00:00:00Z' } } }
+          }}},
+          mimeType: 'application/json'
         },
         'GET /x402/memory': {
           accepts: [{ scheme: 'exact', price: '$0.001', network: X402_NETWORK, payTo: PAY_TO }],
           description: 'Semantically search stored agent memories using natural language',
-          mimeType: 'application/json',
           extensions: { bazaar: { info: {
             input: { type: 'http', method: 'GET',
               queryParams: { query: 'what tools does the user prefer', agent_id: 'my-agent' },
               schema: { properties: { query: { type: 'string' }, agent_id: { type: 'string' } }, required: ['query', 'agent_id'] }
             },
-            output: { success: true, results: [{ content: 'User prefers dark mode', similarity: 0.92 }], count: 1 }
-          }}}
+            output: { example: { success: true, results: [{ content: 'User prefers dark mode', similarity: 0.92 }], count: 1 } }
+          }}},
+          mimeType: 'application/json'
         },
       'POST /x402/docs/upload': {
           accepts: [{ scheme: 'exact', price: '$0.05', network: X402_NETWORK, payTo: PAY_TO }],
-          description: 'Upload and ingest a PDF, TXT, or Markdown document for semantic search',
-          mimeType: 'application/json',
           extensions: { bazaar: { info: {
             input: { type: 'http', method: 'POST', bodyType: 'json',
               body: { agent_id: 'my-agent', file: '<binary PDF/TXT/MD>' },
               schema: { properties: { agent_id: { type: 'string' } }, required: ['agent_id'] }
             },
-            output: { success: true, document: { id: 'uuid', filename: 'contract.pdf', chunk_count: 12 } }
-          }}}
+            output: { example: { success: true, document: { id: 'uuid', filename: 'contract.pdf', chunk_count: 12 } } }
+          }}},
+          description: 'Upload and ingest a PDF, TXT, or Markdown document for semantic search',
+          mimeType: 'application/json'
         },
       'GET /x402/docs/query': {
           accepts: [{ scheme: 'exact', price: '$0.01', network: X402_NETWORK, payTo: PAY_TO }],
-          description: 'Semantically search within an uploaded document using natural language',
-          mimeType: 'application/json',
           extensions: { bazaar: { info: {
             input: { type: 'http', method: 'GET',
               queryParams: { doc_id: 'uuid', q: 'what are the payment terms', agent_id: 'my-agent' },
               schema: { properties: { doc_id: { type: 'string' }, q: { type: 'string' }, agent_id: { type: 'string' } }, required: ['doc_id', 'q', 'agent_id'] }
             },
-            output: { success: true, results: [{ content: 'Payment is due net 30', similarity: 0.88 }], count: 1 }
-          }}}
+            output: { example: { success: true, results: [{ content: 'Payment is due net 30', similarity: 0.88 }], count: 1 } }
+          }}},
+          description: 'Semantically search within an uploaded document using natural language',
+          mimeType: 'application/json'
+        },
+      'GET /x402/translate': {
+          accepts: [{ scheme: 'exact', price: '$0.003', network: X402_NETWORK, payTo: PAY_TO }],
+          extensions: { bazaar: { info: {
+            input: { type: 'http', method: 'GET',
+              queryParams: { text: 'Hello world', target: 'es', source: 'auto' },
+              schema: { properties: { text: { type: 'string' }, target: { type: 'string' }, source: { type: 'string' } }, required: ['text', 'target'] }
+            },
+            output: { example: { success: true, translated: 'Hola mundo', source: 'en', target: 'es', characters: 11 } }
+          }}},
+          description: 'Translate text between 11 languages — EN ES FR DE IT PT ZH JA AR RU KO',
+          mimeType: 'application/json'
         },
       'POST /x402/translate': {
           accepts: [{ scheme: 'exact', price: '$0.003', network: X402_NETWORK, payTo: PAY_TO }],
-          description: 'Translate text between 11 languages — EN ES FR DE IT PT ZH JA AR RU KO',
-          mimeType: 'application/json',
           extensions: { bazaar: { info: {
             input: { type: 'http', method: 'POST', bodyType: 'json',
               body: { text: 'Hello world', target: 'es', source: 'auto' },
               schema: { properties: { text: { type: 'string' }, target: { type: 'string' }, source: { type: 'string' } }, required: ['text', 'target'] }
             },
-            output: { success: true, translated: 'Hola mundo', source: 'en', target: 'es', characters: 11 }
-          }}}
+            output: { example: { success: true, translated: 'Hola mundo', source: 'en', target: 'es', characters: 11 } }
+          }}},
+          description: 'Translate text between 11 languages — EN ES FR DE IT PT ZH JA AR RU KO',
+          mimeType: 'application/json'
         }
       },
       x402Server

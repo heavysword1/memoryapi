@@ -98,6 +98,8 @@ async function main() {
   const paymentPayload = {
     x402Version: data.x402Version,
     accepted: req,  // full payment requirement object for deepEqual match
+    resource: data.resource,  // Required for CDP Bazaar indexing (must be HTTPS)
+    extensions: data.extensions,  // Bazaar metadata copied from 402 response
     payload: { authorization, signature }
   };
 

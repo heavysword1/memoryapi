@@ -50,3 +50,26 @@ router.post('/', async (req, res) => {
 });
 
 module.exports = router;
+
+// GET /x402/translate — also accepts GET with query params
+router.get('/', async (req, res) => {
+  try {
+    const { text, target, source = 'auto' } = req.query;
+    const LIBRETRANSLATE_URL = process.env.LIBRETRANSLATE_URL || 'http://127.0.0.1:5000';
+    const SUPPORTED = ['en','es','fr','de','it','pt','zh','ja','ar','ru','ko'];
+
+    if (!text) return res.status(400).json({ error: 'text is required.' });
+    if (!target) return res.status(400).json({ error: 'target language is required.' });
+    if (!SUPPORTED.includes(target)) return res.status(400).json({ error: `Unsupported target. Supported: ${SUPPORTED.join(', ')}` });
+
+    const response = await fetch(`${LIBRETRANSLATE_URL}/translate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: text, source, target, format: 'text' })
+    });
+    const data = await response.json();
+    res.json({ success: true, translated: data.translatedText, source: data.detectedLanguage?.language || source, target, characters: text.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Translation failed.' });
+  }
+});
