@@ -72,17 +72,7 @@ try {
   }
   const x402Server = new x402ResourceServer(facilitatorClient)
     .register(X402_NETWORK, new ExactEvmScheme())
-    .registerExtension(bazaarResourceServerExtension)
-    .onAfterSettle((context) => {
-      const settle = context?.result;
-      const extensions = settle?.extensions;
-      if (extensions) {
-        console.log('[Bazaar] Settle extensions:', JSON.stringify(extensions));
-      } else {
-        console.log('[Bazaar] No extensions in settle result — Bazaar not seeing metadata');
-        console.log('[Bazaar] Settle result keys:', Object.keys(settle || {}));
-      }
-    });
+    .registerExtension(bazaarResourceServerExtension);
 
   app.use(
     paymentMiddleware(
